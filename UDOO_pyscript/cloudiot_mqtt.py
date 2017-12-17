@@ -13,12 +13,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Python sample for connecting to Google Cloud IoT Core via MQTT, using JWT.
-This example connects to Google Cloud IoT Core via MQTT, using a JWT for device
-authentication. After connecting, by default the device publishes 100 messages
-to the device's MQTT topic at a rate of one per second, and then exits.
-Before you run the sample, you must follow the instructions in the README
-for this sample.
+"""Adapted from Google example for connnecting to CLoud IoT Core via MQTT, using JWT.
+This example is modified for UDOO Quad read the temperature/humidity (DHT11) from 
+Arduino to Linux via serial port interface. 
 """
 
 import argparse
@@ -149,6 +146,7 @@ class SerialPortManager:
 
 # [END Serial Port Handler]
 
+# Parse Command Line Arguments
 def parse_command_line_args():
     """Parse command line arguments."""
     parser = argparse.ArgumentParser(description=(
@@ -203,7 +201,7 @@ def parse_command_line_args():
             help=('Expiration time, in minutes, for JWT tokens.'))
 
     return parser.parse_args()
-
+# [END Parse Command Line Arguments]
 
 
 
@@ -227,7 +225,9 @@ def main():
     #set up the serial port runner
     serialMgr = SerialPortManager()
 
-    # Publish num_messages mesages to the MQTT bridge once per second.
+    # Publish num_messages mesages to the MQTT bridge when there is message at 
+    # serial port. Currently, the arduino side is reading the temperature 
+    # every 5 minutes
     i = 0
     while True:
 
@@ -236,7 +236,7 @@ def main():
         if len(line) > 0:
             i = i + 1
             print("Read from serial port: " + line.decode('ascii'))
-            sensordata = json.loads(line.decode('ascii')    )
+            sensordata = json.loads(line.decode('ascii'))
             sensordata['registryID'] = args.registry_id
             sensordata['deviceID'] = args.device_id
             currentDT = datetime.datetime.now()
