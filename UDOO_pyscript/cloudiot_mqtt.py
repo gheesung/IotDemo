@@ -87,6 +87,12 @@ def on_publish(unused_client, unused_userdata, unused_mid):
     """Paho callback when a message is sent to the broker."""
     print('on_publish')
 
+def on_subscribe(unused_client, unused_userdata, unused_mid, unused_qos):
+    """Paho callback when subscribe to broker."""
+    print('on_subscribe')
+
+def on_message(client, userdata, msg):
+    print('on_message: '+ str(msg.payload))
 
 def get_client(
         project_id, cloud_region, registry_id, device_id, private_key_file,
@@ -115,7 +121,9 @@ def get_client(
     # describes additional callbacks that Paho supports. In this example, the
     # callbacks just print to standard out.
     client.on_connect = on_connect
+    client.on_subscribe = on_subscribe
     client.on_publish = on_publish
+    client.on_message = on_message
     client.on_disconnect = on_disconnect
 
     # Connect to the Google MQTT bridge.
@@ -146,7 +154,6 @@ class SerialPortManager:
 
 # [END Serial Port Handler]
 
-# Parse Command Line Arguments
 def parse_command_line_args():
     """Parse command line arguments."""
     parser = argparse.ArgumentParser(description=(
@@ -201,7 +208,7 @@ def parse_command_line_args():
             help=('Expiration time, in minutes, for JWT tokens.'))
 
     return parser.parse_args()
-# [END Parse Command Line Arguments]
+
 
 
 
@@ -213,6 +220,7 @@ def main():
     sub_topic = 'events' if args.message_type == 'event' else 'state'
 
     mqtt_topic = '/devices/{}/{}'.format(args.device_id, sub_topic)
+    mqtt_config_topic = '/devices/{}/config'.format(args.device_id)
 
     jwt_iat = datetime.datetime.utcnow()
     jwt_exp_mins = args.jwt_expires_minutes
@@ -221,6 +229,8 @@ def main():
         args.private_key_file, args.algorithm, args.ca_certs,
         args.mqtt_bridge_hostname, args.mqtt_bridge_port)
 
+    # subscribe to config topic 
+    client.subscribe(mqtt_config_topic)
 
     #set up the serial port runner
     serialMgr = SerialPortManager()
@@ -236,7 +246,7 @@ def main():
         if len(line) > 0:
             i = i + 1
             print("Read from serial port: " + line.decode('ascii'))
-            sensordata = json.loads(line.decode('ascii'))
+            sensordata = json.loads(line.decode('ascii')    )
             sensordata['registryID'] = args.registry_id
             sensordata['deviceID'] = args.device_id
             currentDT = datetime.datetime.now()
@@ -259,6 +269,8 @@ def main():
                     args.registry_id, args.device_id, args.private_key_file,
                     args.algorithm, args.ca_certs, args.mqtt_bridge_hostname,
                     args.mqtt_bridge_port)
+                # subscribe to config topic 
+                client.subscribe(mqtt_config_topic)
 
             # Publish "payload" to the MQTT topic. qos=1 means at least once
             # delivery. Cloud IoT Core also supports qos=0 for at most once
